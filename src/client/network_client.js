@@ -14,6 +14,14 @@ var packet_reader = require('../packet_reader.js');
 const PACKET_HEADER_SIZE = 2
 const PACKET_ID_SIZE = 2
 
+/**
+ * A connect function.
+ * @param {string} host
+ * @param {number} port
+ * @param {class} remoteProxyClass
+ * @param {object} packetObject
+ * @return {net.Socket} - A socket object.
+ */
 function connect(host, port, remoteClass, packetObject) {
   var socket = new net.Socket();
   socket.setNoDelay(true);
@@ -93,12 +101,12 @@ function connect(host, port, remoteClass, packetObject) {
   });
 
   socket.on('end', function () {
-    console.log('Connection ended');
-    remote.onDisconnected(socket);
+    console.log('Connection ended by the server.');
+    socket.end();
   });
 
-  socket.on('close', function () {
-    console.log('Connection closed');
+  socket.on('close', function (had_error) {
+    console.log('Connection closed.');
     remote.onDisconnected(socket);
   });
 

@@ -47,6 +47,7 @@ class MyRemote extends client.Remote {
 
   onDisconnected() {
     console.log("MyRemote onDisconnected");
+    clearInterval(this.handle)
   }
 
   onError(msg) {
@@ -55,7 +56,7 @@ class MyRemote extends client.Remote {
 
   onLoggedIn() {
     var i = 0;
-    setInterval(() => {
+    this.handle = setInterval(() => {
       this.send(MyPacketClient.make_chat("hello " + i));
       i++;
     }, 1000)
@@ -91,7 +92,55 @@ describe('testNet', function () {
     client.connect(host, port)
 
     setTimeout(function() {
+      client.close()
       done()
+    }, 3000)
+  })
+
+  it('can create another Server and Client instance', function (done) {
+    let port = 3457
+    let s = server.createServer()
+    s.setRemoteProxyClass(MyRemoteProxy)
+    s.setPacketObject(MyPacketServer)
+    s.listen(port)
+
+    let host = 'localhost'
+    let c = client.createClient()
+    c.setRemoteClass(MyRemote)
+    c.setPacketObject(MyPacketClient)
+    c.connect(host, port)
+
+    setTimeout(function() {
+      c.close()
+      done()
+    }, 3000)
+  })
+
+  it('can close Server', function (done) {
+    let port = 3458
+    let s = server.createServer()
+    s.setRemoteProxyClass(MyRemoteProxy)
+    s.setPacketObject(MyPacketServer)
+    s.listen(port)
+
+    let host = 'localhost'
+    let c = client.createClient()
+    c.setRemoteClass(MyRemote)
+    c.setPacketObject(MyPacketClient)
+    c.connect(host, port)
+
+    let c2 = client.createClient()
+    c2.setRemoteClass(MyRemote)
+    c2.setPacketObject(MyPacketClient)
+    c2.connect(host, port)
+
+    let c3 = client.createClient()
+    c3.setRemoteClass(MyRemote)
+    c3.setPacketObject(MyPacketClient)
+    c3.connect(host, port)
+
+    setTimeout(function() {
+      s.close(done)
     }, 3000)
   })
 

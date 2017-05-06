@@ -12,7 +12,9 @@ class Remote {
   }
 
   send(data) {
-    this.socket.send(data)
+    if (!this.socket.destroyed) {
+      this.socket.send(data)
+    }
   }
 
   onConnected() {}
@@ -21,28 +23,45 @@ class Remote {
 }
 
 
-let client = {}
-
-client.setRemoteClass = function(remoteClass) {
-  this.remoteClass = remoteClass
-}
-
-client.setPacketObject = function(packetObject) {
-  this.packetObject = packetObject
-}
-
-client.connect = function(host, port) {
-  if (!this.remoteClass) {
-    console.log('Remote Class is not set')
-    return
+class Client {
+  setRemoteClass(remoteClass) {
+    this.remoteClass = remoteClass
   }
-  if (!this.packetObject) {
-    console.log('Packet Object is not set')
-    return
+
+  setPacketObject(packetObject) {
+    this.packetObject = packetObject
   }
-  // Make a connection
-  network(host, port, this.remoteClass, this.packetObject);
+
+  connect(host, port) {
+    if (!this.remoteClass) {
+      console.log('Remote Class is not set')
+      return
+    }
+    if (!this.packetObject) {
+      console.log('Packet Object is not set')
+      return
+    }
+    // Make a connection
+    this.nodeSocket = network(host, port, this.remoteClass, this.packetObject);
+  }
+
+  close() {
+    if (!this.nodeSocket) {
+      console.log('Client is not connected, cannot be closed.')
+      return
+    }
+    this.nodeSocket.end()
+  }
 }
 
+let client = new Client()
 client.Remote = Remote
+
+/**
+ * Create another Client instance.
+ */
+client.createClient = function() {
+  return new Client()
+}
+
 module.exports = client

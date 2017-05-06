@@ -17,9 +17,12 @@ const PACKET_ID_SIZE = 2
 /**
  * A listen function.
  * @param {number} port
+ * @param {class} remoteProxyClass
+ * @param {object} packetObject
  * @return {net.Server} - A server object.
  */
 function listen(port, remoteProxyClass, packetObject) {
+  let sockets = []
   let server = net.createServer(function (socket) {
     //console.log("There is a connection from " + socket.remoteAddress + ":" + socket.remotePort);
     socket.setNoDelay(true);
@@ -36,6 +39,7 @@ function listen(port, remoteProxyClass, packetObject) {
     });
 
     let remoteProxy = new remoteProxyClass(socket)
+    sockets.push(socket)
     remoteProxy.onConnected()
 
     let readBuffer = new Buffer(65535);
@@ -98,7 +102,6 @@ function listen(port, remoteProxyClass, packetObject) {
     socket.on('end', function () {
       //console.log("Disconnected from uid = " + socket.remoteAddress + ":" + socket.remotePort);
       socket.end();
-      remoteProxy.onDisconnected()
     });
 
     socket.on('error', function (error) {
@@ -108,6 +111,8 @@ function listen(port, remoteProxyClass, packetObject) {
 
     socket.on('close', function (had_error) {
       //console.log("Socket is fully closed uid = " + socket.remoteAddress + ":" + socket.remotePort + ", had_error = " + had_error);
+      remoteProxy.onDisconnected()
+      sockets.splice(sockets.indexOf(sockets), 1)
     });
 
     socket.send = socket.write;
@@ -120,12 +125,14 @@ function listen(port, remoteProxyClass, packetObject) {
 
   server.on('close', function () {
     console.log("Server is now closed.");
-    process.exit(1);
+    //process.exit(1);
   });
 
   server.listen(port, function () {
     console.log("The network has been started listening on port " + port);
   });
+
+  server.sockets = sockets
 
   return server;
 }
