@@ -11,6 +11,8 @@ Thin network layer on top of Node.js, managed TCP connection & buffering. Packet
 ## Basic
 `dgt-net`
 
+https://www.slideshare.net/0angelic0mermaid/basic-multiplayer-online-game-with-nodejs-dgtnet
+
 ## Demo
 
 `dgt-net_demo` with Unity Game Engine client
