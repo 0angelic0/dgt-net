@@ -95,6 +95,10 @@ describe('testNet', function () {
       client.close()
       done()
     }, 3000)
+
+    setTimeout(function() {
+      server.close()
+    }, 6000)
   })
 
   it('can create another Server and Client instance', function (done) {
@@ -112,6 +116,7 @@ describe('testNet', function () {
 
     setTimeout(function() {
       c.close()
+      s.close()
       done()
     }, 3000)
   })
@@ -142,6 +147,29 @@ describe('testNet', function () {
     setTimeout(function() {
       s.close(done)
     }, 3000)
+  })
+
+  it('works for big packet', function (done) {
+    let port = 3458
+    let s = server.createServer()
+    s.setRemoteProxyClass(MyRemoteProxy)
+    s.setPacketObject(MyPacketServer)
+    s.listen(port)
+
+    let host = 'localhost'
+    let c = client.createClient()
+    c.setRemoteClass(MyRemote)
+    c.setPacketObject(MyPacketClient)
+    c.connect(host, port)
+
+    setTimeout(function() {
+      c.send(MyPacketClient.make_big_packet())
+    }, 1000)
+
+    setTimeout(function() {
+      c.close()
+      s.close(done)
+    }, 6000)
   })
 
 })

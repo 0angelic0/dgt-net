@@ -45,6 +45,14 @@ class Client {
     this.nodeSocket = network(host, port, this.remoteClass, this.packetObject);
   }
 
+  send(p) {
+    if (!this.nodeSocket) {
+      console.log('Client is not connected, cannot send.')
+      return
+    }
+    this.nodeSocket.send(p)
+  }
+
   close() {
     if (!this.nodeSocket) {
       console.log('Client is not connected, cannot be closed.')

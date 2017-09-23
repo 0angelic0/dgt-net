@@ -39,7 +39,7 @@ function connect(host, port, remoteClass, packetObject) {
 
   let remote = new remoteClass(socket)
 
-  var readBuffer = new Buffer(1024);
+  var readBuffer = new Buffer(65535);
   var readBufferOffset = 0;
   var bWaitHeader = true;
   var expectedBytes = PACKET_HEADER_SIZE;
@@ -56,48 +56,49 @@ function connect(host, port, remoteClass, packetObject) {
 
   socket.on('data', function (buffer) {
 
-    var avail = buffer.length;
-    var alreadyReadBytes = 0;
+    let avail = buffer.length;
+      let alreadyReadBytes = 0;
 
-    if (avail < expectedBytes) {
-      // read and append to buffer
-      buffer.copy(readBuffer, readBufferOffset);
-      readBufferOffset += avail;
-      expectedBytes = expectedBytes - avail;
-    } else {
-      // we have more than we expect
-      while (avail >= expectedBytes) {
-        buffer.copy(readBuffer, readBufferOffset, alreadyReadBytes, alreadyReadBytes + expectedBytes); // Got completed!
-        readBufferOffset += expectedBytes;
-        alreadyReadBytes += expectedBytes;
-        avail = avail - expectedBytes;
-
-        if (bWaitHeader) {
-          // What we just got is header that tell packet content size.
-          var packetContentSize = readBuffer.readUInt16LE(0);
-          // The packet content size is exclude packet id size.
-          // So, we expect sum of both.
-          expectedBytes = PACKET_ID_SIZE + packetContentSize;
-          readBufferOffset = 0;
-          bWaitHeader = !bWaitHeader;
+      while (avail > 0) {
+        if (avail < expectedBytes) {
+          // read and append to buffer
+          buffer.copy(readBuffer, readBufferOffset, alreadyReadBytes);
+          readBufferOffset += avail;
+          expectedBytes = expectedBytes - avail;
+          avail = 0;
         } else {
-          var packetContentLength = expectedBytes; // Include packet id size
-          var data = new packet_reader(readBuffer, packetContentLength);
-          readBufferOffset = 0;
-          var packetID = data.get_id();
+          // we have equal or more than we expect
+          buffer.copy(readBuffer, readBufferOffset, alreadyReadBytes, alreadyReadBytes + expectedBytes); // Got completed!
+          readBufferOffset += expectedBytes;
+          alreadyReadBytes += expectedBytes;
+          avail = avail - expectedBytes;
 
-          d.run(function () {
-            if (packetObject[packetID](remote, data)) {
-              console.error("Packet length is more than needed. " + socket.remoteAddress + ":" + socket.remotePort);
-              socket.end();
-            }
-          });
+          if (bWaitHeader) {
+            // What we just got is header that tell packet content size.
+            let packetContentSize = readBuffer.readUInt16LE(0);
+            // The packet content size is exclude packet id size.
+            // So, we expect sum of both.
+            expectedBytes = PACKET_ID_SIZE + packetContentSize;
+            packetContentLength = expectedBytes; // Include packet id size
+            readBufferOffset = 0;
+            bWaitHeader = !bWaitHeader;
+          } else {
+            let data = new packet_reader(readBuffer, packetContentLength);
+            readBufferOffset = 0;
+            packetContentLength = 0;
+            expectedBytes = PACKET_HEADER_SIZE;
+            bWaitHeader = !bWaitHeader;
 
-          expectedBytes = PACKET_HEADER_SIZE;
-          bWaitHeader = !bWaitHeader;
+            d.run(function () {
+              let packetID = data.get_id();
+              if (packetObject[packetID](remote, data)) {
+                console.error("Packet length is more than needed. " + socket.remoteAddress + ":" + socket.remotePort);
+                socket.end();
+              }
+            });
+          }
         }
       }
-    }
   });
 
   socket.on('end', function () {

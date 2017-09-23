@@ -46,6 +46,7 @@ function listen(port, remoteProxyClass, packetObject) {
     let readBufferOffset = 0;
     let bWaitHeader = true;
     let expectedBytes = PACKET_HEADER_SIZE;
+    let packetContentLength = 0;
 
     socket.on('data', function (buffer) {
 
@@ -58,14 +59,15 @@ function listen(port, remoteProxyClass, packetObject) {
       let avail = buffer.length;
       let alreadyReadBytes = 0;
 
-      if (avail < expectedBytes) {
-        // read and append to buffer
-        buffer.copy(readBuffer, readBufferOffset);
-        readBufferOffset += avail;
-        expectedBytes = expectedBytes - avail;
-      } else {
-        // we have more than we expect
-        while (avail >= expectedBytes) {
+      while (avail > 0) {
+        if (avail < expectedBytes) {
+          // read and append to buffer
+          buffer.copy(readBuffer, readBufferOffset, alreadyReadBytes);
+          readBufferOffset += avail;
+          expectedBytes = expectedBytes - avail;
+          avail = 0;
+        } else {
+          // we have equal or more than we expect
           buffer.copy(readBuffer, readBufferOffset, alreadyReadBytes, alreadyReadBytes + expectedBytes); // Got completed!
           readBufferOffset += expectedBytes;
           alreadyReadBytes += expectedBytes;
@@ -77,23 +79,23 @@ function listen(port, remoteProxyClass, packetObject) {
             // The packet content size is exclude packet id size.
             // So, we expect sum of both.
             expectedBytes = PACKET_ID_SIZE + packetContentSize;
+            packetContentLength = expectedBytes; // Include packet id size
             readBufferOffset = 0;
             bWaitHeader = !bWaitHeader;
           } else {
-            let packetContentLength = expectedBytes; // Include packet id size
             let data = new packet_reader(readBuffer, packetContentLength);
             readBufferOffset = 0;
-            let packetID = data.get_id();
+            packetContentLength = 0;
+            expectedBytes = PACKET_HEADER_SIZE;
+            bWaitHeader = !bWaitHeader;
 
             d.run(function () {
+              let packetID = data.get_id();
               if (packetObject[packetID](remoteProxy, data)) {
                 console.error("Packet length is more than needed. " + socket.remoteAddress + ":" + socket.remotePort);
                 socket.end();
               }
             });
-
-            expectedBytes = PACKET_HEADER_SIZE;
-            bWaitHeader = !bWaitHeader;
           }
         }
       }

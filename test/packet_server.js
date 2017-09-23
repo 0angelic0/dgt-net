@@ -19,6 +19,7 @@ var packet = {
   CS_PING: 10002,
   CS_QUESTION: 10003,
   CS_CHAT: 10004,
+  CS_BIG_PACKET: 10005,
 
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -30,6 +31,7 @@ var packet = {
   SC_PING_SUCCESS: 20002,
   SC_QUESTION: 20003,
   SC_CHAT: 20004,
+  SC_BIG_PACKET: 20005,
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -53,6 +55,11 @@ packet[packet.CS_CHAT] = function (remoteProxy, data) {
   remoteProxy.chat(msg);
 }
 
+packet[packet.CS_BIG_PACKET] = function (remoteProxy, data) {
+  var msg = data.read_string();
+  if (!data.completed()) return true;
+  remoteProxy.chat(msg);
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////
